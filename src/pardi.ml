@@ -25,7 +25,7 @@ let main () =
               how to cut input file into chunks\n\
               {-w|--work} <file>: script to execute on each chunk\n\
               {-m|--mux} {cat|null}: how to mux job results in output file\n\
-              {-k|--keep}: keep input order\n"
+              {-k|--keep}: keep/preserve input order\n"
        Sys.argv.(0);
      exit 1);
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
@@ -34,6 +34,12 @@ let main () =
   let out_chan = match CLI.get_string_opt ["-o";"--output"] args with
     | None -> stdout
     | Some fn -> open_out fn in
+  let _nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
+    | None -> Utls.get_nprocs ()
+    | Some n -> n in
+  let _csize = match CLI.get_int_opt ["-c";"--chunks"] args with
+    | None -> 1
+    | Some n -> n in
   (* FBR: TODO *)
   close_in in_chan;
   close_out out_chan
