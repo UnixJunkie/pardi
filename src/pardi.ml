@@ -1,5 +1,6 @@
 
 module CLI = Minicli.CLI
+module Fn = Filename
 
 open Printf
 
@@ -8,6 +9,23 @@ type input_block = Line
                  | Bytes of int
                  | Sep of string
                  | Reg of string (* regexp *)
+
+let read_some counter csize input in_block () =
+  let tmp_fn = Fn.temp_file "pardi_" ".txt" in
+  Utls.with_out_file tmp_fn (fun out ->
+      match in_block with
+      | Line ->
+        for _ = 1 to csize do
+          let line = input_line input in
+          fprintf out "%s\n" line
+        done
+      | Bytes _n -> failwith "not implemented yet"
+      | Sep _s -> failwith "not implemented yet"
+      | Reg _r -> failwith "not implemented yet"
+    );
+  (* return counter and that tmp filename *)
+  incr counter;
+  (!counter, tmp_fn)
 
 let main () =
   Log.color_on ();
