@@ -10,9 +10,9 @@ type demux_mode = Line (* default (SMI) *)
                 | Bytes of int (* fixed block length *)
                 | Reg of string (* a regexp separator *)
 
-let read_some counter csize input demux () =
+let read_some count csize input demux () =
   let read = ref 0 in
-  let tmp_fn = Fn.temp_file "pardi_" ".txt" in
+  let tmp_fn = Fn.temp_file "pardi_in_" ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
       | Line ->
@@ -29,10 +29,35 @@ let read_some counter csize input demux () =
     );
   if !read = 0 then raise Parany.End_of_input;
   (* return item count and temp filename *)
-  (* the counter will be useful if the user wants to preserve input order *)
-  let res = (!counter, tmp_fn) in
-  counter := !counter + !read;
+  (* the count will be useful if the user wants to preserve input order *)
+  let res = (!count, tmp_fn) in
+  incr count;
   res
+
+let input_fn_tag = Str.regexp "%INPUT"
+let output_fn_tag = Str.regexp "%OUTPUT"
+
+let process_some cmd (_count, tmp_in_fn) =
+  (* FBR: preserve (and so count) is ignored for the moment *)
+  assert(Str.string_match input_fn_tag cmd 0);
+  let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
+  let tmp_out_fn = Fn.temp_file "pardi_out_" ".txt" in
+  assert(Str.string_match output_fn_tag cmd' 0);
+  let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
+  Utls.run_command cmd'';
+  tmp_out_fn
+
+type filename = string
+
+type mux_mode = Cat of filename
+              | Null
+
+let gather_some mux_mode tmp_out_fn =
+  match mux_mode with
+  | Cat dst_fn ->
+    let () = Utls.run_command (sprintf "cat %s >> %s" tmp_out_fn dst_fn) in
+    Sys.remove tmp_out_fn
+  | Null -> ()
 
 let main () =
   Log.color_on ();
