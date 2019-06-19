@@ -39,10 +39,10 @@ let output_fn_tag = Str.regexp "%OUT"
 
 let process_some cmd (_count, tmp_in_fn) =
   (* FBR: preserve (and so count) is ignored for the moment *)
-  assert(Str.string_match input_fn_tag cmd 0);
+  assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
   let tmp_out_fn = Fn.temp_file "pardi_out_" ".txt" in
-  assert(Str.string_match output_fn_tag cmd' 0);
+  assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   Utls.run_command cmd'';
   tmp_out_fn

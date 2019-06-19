@@ -396,3 +396,7 @@ let stddev (l: float list): float =
 
 let fincr_by (xref: float ref) (dx: float): unit =
   xref := !xref +. dx
+
+let regexp_in_string reg str =
+  try let _i = Str.search_forward reg str 0 in true
+  with Not_found -> false
