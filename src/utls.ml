@@ -174,8 +174,8 @@ let command_exists (cmd: string): string option =
   else
     None
 
-let run_command (cmd: string): unit =
-  Log.info "run_command: %s" cmd;
+let run_command (debug: bool) (cmd: string): unit =
+  if debug then Log.info "run_command: %s" cmd;
   match Unix.system cmd with
   | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; exit 1)
   | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; exit 1)

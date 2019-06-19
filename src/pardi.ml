@@ -37,14 +37,14 @@ let read_some count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some cmd (_count, tmp_in_fn) =
+let process_some debug cmd (_count, tmp_in_fn) =
   (* FBR: preserve (and so count) is ignored for the moment *)
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
   let tmp_out_fn = Fn.temp_file "pardi_out_" ".txt" in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
-  Utls.run_command cmd'';
+  Utls.run_command debug cmd'';
   tmp_out_fn
 
 type filename = string
@@ -52,10 +52,18 @@ type filename = string
 type mux_mode = Cat of filename
               | Null
 
-let gather_some mux_mode tmp_out_fn =
+let mux_count = ref 0
+
+let gather_some debug mux_mode tmp_out_fn =
   match mux_mode with
   | Cat dst_fn ->
-    let () = Utls.run_command (sprintf "cat %s >> %s" tmp_out_fn dst_fn) in
+    let cmd =
+      sprintf (if !mux_count = 0
+               then "cp -f %s %s" (* crush existing file, if any *)
+               else "cat %s >> %s" (* or just append to it *)
+              ) tmp_out_fn dst_fn in
+    let () = Utls.run_command debug cmd in
+    incr mux_count;
     Sys.remove tmp_out_fn
   | Null -> ()
 
@@ -79,6 +87,7 @@ let main () =
               {-p|--preserve}: preserve input order (default: no)\n"
        Sys.argv.(0);
      exit 1);
+  let debug = CLI.get_set_bool ["-v";"--verbose"] args in
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
     | None -> stdin
     | Some fn -> open_in fn in
@@ -95,8 +104,8 @@ let main () =
      of chunks per job *)
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some count csize in_chan Line)
-    ~work:(process_some cmd)
-    ~mux:(gather_some (Cat out_fn));
+    ~work:(process_some debug cmd)
+    ~mux:(gather_some debug (Cat out_fn));
   close_in in_chan
 
 let () = main ()
