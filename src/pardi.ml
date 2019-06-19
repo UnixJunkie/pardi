@@ -34,8 +34,8 @@ let read_some count csize input demux () =
   incr count;
   res
 
-let input_fn_tag = Str.regexp "%INPUT"
-let output_fn_tag = Str.regexp "%OUTPUT"
+let input_fn_tag = Str.regexp "%IN"
+let output_fn_tag = Str.regexp "%OUT"
 
 let process_some cmd (_count, tmp_in_fn) =
   (* FBR: preserve (and so count) is ignored for the moment *)
@@ -66,14 +66,14 @@ let main () =
   let show_help = CLI.get_set_bool ["-h";"--help"] args in
   if argc = 1 || show_help then
     (eprintf "usage:\n\
-              %s [...]\n\
+              %s ...\n\
               {-i|--input} <file>: where to read from (default: stdin)\n\
               {-o|--output} <file>: where to write to (default: stdout)\n\
               {-n|--nprocs} <int>: max jobs in parallel (default: all cores)\n\
               {-c|--chunks} <int>: how many chunks per job (default: 1)\n\
               {-d|--demux} {l|b:<int>|s:<string>}: \
               how to cut input file into chunks (default: l)\n\
-              {-w|--work} <file>: script to execute on each chunk\n\
+              {-w|--work} <string>: command to execute on each chunk\n\
               {-m|--mux} {cat|null}: how to mux job results in output file \
                          (default: cat)\n\
               {-p|--preserve}: preserve input order (default: no)\n"
@@ -82,17 +82,21 @@ let main () =
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
     | None -> stdin
     | Some fn -> open_in fn in
-  let out_chan = match CLI.get_string_opt ["-o";"--output"] args with
-    | None -> stdout
-    | Some fn -> open_out fn in
-  let _nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
+  let out_fn = CLI.get_string_def ["-o";"--output"] args "/dev/stdout" in
+  let cmd = CLI.get_string ["-w";"--work"] args in
+  let nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
     | None -> Utls.get_nprocs ()
     | Some n -> n in
-  let _csize = match CLI.get_int_opt ["-c";"--chunks"] args with
+  let csize = match CLI.get_int_opt ["-c";"--chunks"] args with
     | None -> 1
     | Some n -> n in
-  (* FBR: TODO *)
-  close_in in_chan;
-  close_out out_chan
+  let count = ref 0 in
+  (* Parany has a csize of one, because read_some takes care of the number
+     of chunks per job *)
+  Parany.run ~verbose:false ~csize:1 ~nprocs
+    ~demux:(read_some count csize in_chan Line)
+    ~work:(process_some cmd)
+    ~mux:(gather_some (Cat out_fn));
+  close_in in_chan
 
 let () = main ()
