@@ -5,27 +5,34 @@ module Fn = Filename
 open Printf
 
 (* how to cut the input file into independant items *)
-type input_block = Line
-                 | Bytes of int
-                 | Sep of string
-                 | Reg of string (* regexp *)
+type demux_mode = Line (* default (SMI) *)
+                | Sep of string (* (MOL2,SDF,PDB,etc.) *)
+                | Bytes of int (* fixed block length *)
+                | Reg of string (* a regexp separator *)
 
-let read_some counter csize input in_block () =
+let read_some counter csize input demux () =
+  let read = ref 0 in
   let tmp_fn = Fn.temp_file "pardi_" ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
-      match in_block with
+      match demux with
       | Line ->
-        for _ = 1 to csize do
-          let line = input_line input in
-          fprintf out "%s\n" line
-        done
-      | Bytes _n -> failwith "not implemented yet"
-      | Sep _s -> failwith "not implemented yet"
-      | Reg _r -> failwith "not implemented yet"
+        (try
+           for _ = 1 to csize do
+             let line = input_line input in
+             incr read;
+             fprintf out "%s\n" line
+           done
+         with End_of_file -> ())
+      | Sep _ -> failwith "Pardi.read_some: Sep: not implemented yet"
+      | Bytes _ -> failwith "Pardi.read_some: Bytes: not implemented yet"
+      | Reg _ -> failwith "Pardi.read_some: Reg: not implemented yet"
     );
-  (* return counter and that tmp filename *)
-  incr counter;
-  (!counter, tmp_fn)
+  if !read = 0 then raise Parany.End_of_input;
+  (* return item count and temp filename *)
+  (* the counter will be useful if the user wants to preserve input order *)
+  let res = (!counter, tmp_fn) in
+  counter := !counter + !read;
+  res
 
 let main () =
   Log.color_on ();
@@ -39,11 +46,12 @@ let main () =
               {-o|--output} <file>: where to write to (default: stdout)\n\
               {-n|--nprocs} <int>: max jobs in parallel (default: all cores)\n\
               {-c|--chunks} <int>: how many chunks per job (default: 1)\n\
-              {-d|--demux} {l|b:<int>|sep:<string>}: \
-              how to cut input file into chunks\n\
+              {-d|--demux} {l|b:<int>|s:<string>}: \
+              how to cut input file into chunks (default: l)\n\
               {-w|--work} <file>: script to execute on each chunk\n\
-              {-m|--mux} {cat|null}: how to mux job results in output file\n\
-              {-k|--keep}: keep/preserve input order\n"
+              {-m|--mux} {cat|null}: how to mux job results in output file \
+                         (default: cat)\n\
+              {-p|--preserve}: preserve input order (default: no)\n"
        Sys.argv.(0);
      exit 1);
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
