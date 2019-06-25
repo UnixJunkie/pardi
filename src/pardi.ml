@@ -85,8 +85,8 @@ let mux_count = ref 0
 let gather_some debug mux_mode tmp_out_fn =
   match mux_mode with
   | Mux.Null -> ()
-  | Mux.Sorted_cat_into _dst_fn ->
-    failwith "Pardi.gather_some: not implemented yet: Sorted_cat_into"
+  | Mux.Sort_cat_into _dst_fn ->
+    failwith "Pardi.gather_some: not implemented yet: Sort_cat_into"
   | Mux.Cat_into dst_fn ->
     begin
       let cmd =
@@ -107,17 +107,16 @@ let main () =
   let show_help = CLI.get_set_bool ["-h";"--help"] args in
   if argc = 1 || show_help then
     (eprintf "usage:\n\
-              %s ...\n\
-              {-i|--input} <file>: where to read from (default: stdin)\n\
-              {-o|--output} <file>: where to write to (default: stdout)\n\
-              {-n|--nprocs} <int>: max jobs in parallel (default: all cores)\n\
-              {-c|--chunks} <int>: how many chunks per job (default: 1)\n\
-              {-d|--demux} {l|b:<int>|s:<string>}: \
-              how to cut input file into chunks (default: l)\n\
-              {-w|--work} <string>: command to execute on each chunk\n\
-              {-m|--mux} {cat|null}: how to mux job results in output file \
-                         (default: cat)\n\
-              {-p|--preserve}: preserve input order (default: no)\n"
+              %s ...\n  \
+              {-i|--input} <file>: where to read from (default=stdin)\n  \
+              {-o|--output} <file>: where to write to (default=stdout)\n  \
+              {-n|--nprocs} <int>: max jobs in parallel (default=all cores)\n  \
+              {-c|--chunks} <int>: how many chunks per job (default=1)\n  \
+              {-d|--demux} {l|b:<int>|s:<string>}: how to cut input file into\n  \
+              chunks (line/bytes/sep_line; default=line)\n  \
+              {-w|--work} <string>: command to execute on each chunk\n  \
+              {-m|--mux} {c|s|n}: how to mux job results in output file\n  \
+              (cat/sorted_cat/null; default=cat)\n"
        Sys.argv.(0);
      exit 1);
   let debug = CLI.get_set_bool ["-v";"--verbose"] args in
@@ -135,14 +134,17 @@ let main () =
   let demux =
     let demux_str = CLI.get_string_def ["-d";"--demux"] args "l" in
     Demux.of_string demux_str in
+  let mux =
+    let mux_str = CLI.get_string_def ["-m";"--mux"] args "c" in
+    Mux.of_string out_fn mux_str in
   CLI.finalize ();
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some debug cmd)
-    ~mux:(gather_some debug (Cat_into out_fn));
-  printf "\n%!";
+    ~mux:(gather_some debug mux);
+  printf "\n";
   close_in in_chan
 
 let () = main ()
