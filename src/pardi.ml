@@ -112,8 +112,8 @@ let main () =
               {-o|--output} <file>: where to write to (default=stdout)\n  \
               {-n|--nprocs} <int>: max jobs in parallel (default=all cores)\n  \
               {-c|--chunks} <int>: how many chunks per job (default=1)\n  \
-              {-d|--demux} {l|b:<int>|s:<string>}: how to cut input file into\n  \
-              chunks (line/bytes/sep_line; default=line)\n  \
+              {-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}: how to cut input \n  \
+              file into chunks (line/bytes/regexp/sep_line; default=line)\n  \
               {-w|--work} <string>: command to execute on each chunk\n  \
               {-m|--mux} {c|s|n}: how to mux job results in output file\n  \
               (cat/sorted_cat/null; default=cat)\n"
