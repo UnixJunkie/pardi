@@ -80,17 +80,14 @@ let process_some debug cmd (_count, tmp_in_fn) =
   Utls.run_command debug cmd'';
   tmp_out_fn
 
-type filename = string
-
-type mux_mode = Cat of filename
-              | Null
-
 let mux_count = ref 0
 
 let gather_some debug mux_mode tmp_out_fn =
   match mux_mode with
-  | Null -> ()
-  | Cat dst_fn ->
+  | Mux.Null -> ()
+  | Mux.Sorted_cat_into _dst_fn ->
+    failwith "Pardi.gather_some: not implemented yet: Sorted_cat_into"
+  | Mux.Cat_into dst_fn ->
     begin
       let cmd =
         sprintf (if !mux_count = 0
@@ -144,7 +141,7 @@ let main () =
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some debug cmd)
-    ~mux:(gather_some debug (Cat out_fn));
+    ~mux:(gather_some debug (Cat_into out_fn));
   printf "\n%!";
   close_in in_chan
 
