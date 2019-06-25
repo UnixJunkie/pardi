@@ -19,3 +19,8 @@ diff data/test_in.types data/test_out.types
 ./pardi -c 6 -i data/test_in.types -o data/test_out.types \
         -d 'r:^#atoms:' -w 'cat %IN > %OUT'
 diff data/test_in.types data/test_out.types
+
+rm -f data/still_decoys.mol2
+./pardi -i data/decoys.mol2 -o data/still_decoys.mol2 \
+        -d 's:@<TRIPOS>MOLECULE' -w 'cp %IN %OUT'
+grep -c '@<TRIPOS>MOLECULE' data/decoys.mol2 data/still_decoys.mol2
