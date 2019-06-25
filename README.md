@@ -1,2 +1,3 @@
-# pardi
-parallel and distributed execution of command lines
+# ParDi
+
+Parallel and Distributed execution of command lines, pardi!
