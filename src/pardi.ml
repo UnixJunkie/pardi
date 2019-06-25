@@ -25,11 +25,13 @@ let rec read_one_block
       end
   with End_of_file ->
     if Buffer.length buff > 0 then
-      Buffer.contents buff (* last block read *)
+      let res = Buffer.contents buff in (* last block read *)
+      Buffer.reset buff;
+      res
     else
       raise End_of_file (* no more blocks *)
 
-let read_some count csize input demux () =
+let read_some buff count csize input demux () =
   let read = ref 0 in
   let tmp_fn = Fn.temp_file "pardi_in_" ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
@@ -47,7 +49,6 @@ let read_some count csize input demux () =
       | Demux.Reg reg ->
         let stop_cond line =
           Str.string_match reg line 0 in
-        let buff = Buffer.create 1024 in
         try
           for _ = 1 to csize do
             let block = read_one_block buff stop_cond input in
@@ -135,11 +136,10 @@ let main () =
     let demux_str = CLI.get_string_def ["-d";"--demux"] args "l" in
     Demux.of_string demux_str in
   CLI.finalize ();
-  let count = ref 0 in
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
   Parany.run ~verbose:false ~csize:1 ~nprocs
-    ~demux:(read_some count csize in_chan demux)
+    ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some debug cmd)
     ~mux:(gather_some debug (Cat out_fn));
   printf "\n%!";
