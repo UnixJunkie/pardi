@@ -36,6 +36,7 @@ let read_some buff count csize input demux () =
   let tmp_fn = Fn.temp_file "pardi_in_" ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
+      | Demux.Bytes _ -> failwith "Pardi.read_some: Bytes: not implemented yet"
       | Demux.Line ->
         (try
            for _ = 1 to csize do
@@ -44,11 +45,13 @@ let read_some buff count csize input demux () =
              fprintf out "%s\n" line
            done
          with End_of_file -> ())
-      | Demux.Sep _ -> failwith "Pardi.read_some: Sep: not implemented yet"
-      | Demux.Bytes _ -> failwith "Pardi.read_some: Bytes: not implemented yet"
-      | Demux.Reg reg ->
-        let stop_cond line =
-          Str.string_match reg line 0 in
+      | Demux.Line_sep _
+      | Demux.Reg _ ->
+        let stop_cond =
+          match demux with
+          | Line_sep sep -> (fun line -> String.equal sep line)
+          | Reg reg -> (fun line -> Str.string_match reg line 0)
+          | _ -> assert(false) in
         try
           for _ = 1 to csize do
             let block = read_one_block buff stop_cond input in
