@@ -401,8 +401,15 @@ let regexp_in_string reg str =
   try let _i = Str.search_forward reg str 0 in true
   with Not_found -> false
 
-let rec really_read fd buffer start length =
-  if length <= 0 then () else
-    match Unix.read fd buffer start length with
-    | 0 -> raise End_of_file
-    | r -> really_read fd buffer (start + r) (length - r)
+(* only before end of file might the read be shorter than what was asked for *)
+let really_read (fd: Unix.file_descr) (buff: bytes) (length: int): int =
+  let rec loop nb_read =
+    if nb_read = length then
+      nb_read
+    else
+      match Unix.read fd buff nb_read (length - nb_read) with
+      | 0 -> nb_read
+      | r -> loop (nb_read + r) in
+  match loop 0 with
+  | 0 -> raise End_of_file
+  | n -> n
