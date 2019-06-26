@@ -400,3 +400,9 @@ let fincr_by (xref: float ref) (dx: float): unit =
 let regexp_in_string reg str =
   try let _i = Str.search_forward reg str 0 in true
   with Not_found -> false
+
+let rec really_read fd buffer start length =
+  if length <= 0 then () else
+    match Unix.read fd buffer start length with
+    | 0 -> raise End_of_file
+    | r -> really_read fd buffer (start + r) (length - r)
