@@ -12,14 +12,14 @@ let create () =
 
 let insert_into (rank, x) l =
   let rec loop acc = function
-    | [] -> L.rev_append acc [(rank, x)]
+    | [] -> List.rev_append acc [(rank, x)]
     | (rank', y) :: rest ->
       if rank' < rank then
         loop ((rank', y) :: acc) rest
       else if rank' = rank then
         assert(false) (* no two elements are allowed to have the same prio *)
       else (* rank' > rank *)
-        L.rev_append acc ((rank, [x]) :: (rank', y) :: rest)
+        List.rev_append acc ((rank, x) :: (rank', y) :: rest)
   in
   loop [] l
 
@@ -36,3 +36,10 @@ let pop q =
       q.q <- xs;
       q.next_rank <- q.next_rank + 1;
       res
+
+let pop_all q =
+  let rec loop acc =
+    match pop q with
+    | None -> List.rev acc
+    | Some x -> loop (x :: acc) in
+  loop []
