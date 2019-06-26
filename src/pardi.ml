@@ -1,6 +1,7 @@
 
 module CLI = Minicli.CLI
 module Fn = Filename
+module Squeue = Sorted_queue
 
 open Printf
 
@@ -90,23 +91,37 @@ let read_some buff count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some debug cmd (_count, tmp_in_fn) =
-  (* FBR: --preserve (and so count) is ignored for the moment *)
+let process_some debug cmd (count, tmp_in_fn) =
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
   let tmp_out_fn = Fn.temp_file "pardi_out_" ".txt" in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   Utls.run_command debug cmd'';
-  tmp_out_fn
+  (count, tmp_out_fn)
 
-let mux_count = ref 0
+(* in case we need to preserve input order *)
+let out_queue = Sorted_queue.create ()
 
-let gather_some debug mux_mode tmp_out_fn =
+let gather_some debug mux_count mux_mode (count, tmp_out_fn) =
   match mux_mode with
-  | Mux.Null -> ()
-  | Mux.Sort_cat_into _dst_fn ->
-    failwith "Pardi.gather_some: not implemented yet: Sort_cat_into"
+  | Mux.Null -> () (* tmp_out_fn is not removed? *)
+  | Mux.Sort_cat_into dst_fn ->
+    begin
+      Squeue.insert (count, tmp_out_fn) out_queue;
+      let popped = Squeue.pop_all out_queue in
+      List.iter (fun out_fn ->
+          let cmd =
+            sprintf (if !mux_count = 0
+                     then "cp -f %s %s" (* crush existing file, if any *)
+                     else "cat %s >> %s" (* or just append to it *)
+                    ) out_fn dst_fn in
+          Utls.run_command debug cmd;
+          Sys.remove out_fn;
+          incr mux_count
+        ) popped;
+      printf "processed: %d\r%!" !mux_count (* user feedback *)
+    end
   | Mux.Cat_into dst_fn ->
     begin
       let cmd =
@@ -163,7 +178,7 @@ let main () =
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some debug cmd)
-    ~mux:(gather_some debug mux);
+    ~mux:(gather_some debug (ref 0) mux);
   printf "\n";
   close_in in_chan
 
