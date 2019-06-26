@@ -31,20 +31,40 @@ let rec read_one_block
     else
       raise End_of_file (* no more blocks *)
 
+let read_buff = ref (Bytes.create 0)
+let read_fd = ref (Unix.descr_of_in_channel stdin)
+
 let read_some buff count csize input demux () =
   let read = ref 0 in
   let tmp_fn = Fn.temp_file "pardi_in_" ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
-      | Demux.Bytes _ -> failwith "Pardi.read_some: Bytes: not implemented yet"
+      | Demux.Bytes n ->
+        begin
+          try
+            if !count = 0 then
+              begin
+                (* only allocate buffer and extract fd once *)
+                read_buff := Bytes.create n;
+                read_fd := Unix.descr_of_in_channel input
+              end;
+            for _ = 1 to csize do
+              let was_read = Utls.really_read !read_fd !read_buff n in
+              incr read;
+              output out !read_buff 0 was_read
+            done
+          with End_of_file -> ()
+        end
       | Demux.Line ->
-        (try
-           for _ = 1 to csize do
-             let line = input_line input in
-             incr read;
-             fprintf out "%s\n" line
-           done
-         with End_of_file -> ())
+        begin
+          try
+            for _ = 1 to csize do
+              let line = input_line input in
+              incr read;
+              fprintf out "%s\n" line
+            done
+          with End_of_file -> ()
+        end
       | Demux.Line_sep _
       | Demux.Reg _ ->
         let stop_cond =
