@@ -37,7 +37,7 @@ let read_fd = ref (Unix.descr_of_in_channel stdin)
 
 let read_some buff count csize input demux () =
   let read = ref 0 in
-  let tmp_fn = Fn.temp_file "pardi_in_" ".txt" in
+  let tmp_fn = Fn.temp_file (sprintf "pardi_in_%d_" !count) ".txt" in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
       | Demux.Bytes n ->
@@ -84,7 +84,7 @@ let read_some buff count csize input demux () =
   if !read = 0 then
     begin
       Sys.remove tmp_fn;
-      raise Parany.End_of_input;
+      raise Parany.End_of_input
     end;
   (* return item count and temp filename *)
   (* the count will be useful if the user wants to preserve input order *)
@@ -95,50 +95,49 @@ let read_some buff count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some debug cmd (count, tmp_in_fn) =
+let process_some cmd (count, tmp_in_fn) =
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
-  let tmp_out_fn = Fn.temp_file "pardi_out_" ".txt" in
+  let tmp_out_fn = Fn.temp_file (sprintf "pardi_out_%d_" count) ".txt" in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
-  Utls.run_command debug cmd'';
-  Sys.remove tmp_in_fn;
+  let cmd''' = sprintf "%s; rm %s" cmd'' tmp_in_fn in
+  Utls.run_command !Flags.debug cmd''';
   (count, tmp_out_fn)
 
 (* in case we need to preserve input order *)
 let out_queue = Sorted_queue.create ()
 
-let gather_some debug mux_count mux_mode (count, tmp_out_fn) =
-  match mux_mode with
-  | Mux.Null -> () (* tmp_out_fn is not removed? *)
-  | Mux.Sort_cat_into dst_fn ->
-    begin
-      Squeue.insert (count, tmp_out_fn) out_queue;
-      let popped = Squeue.pop_all out_queue in
-      List.iter (fun out_fn ->
-          let cmd =
-            sprintf (if !mux_count = 0
-                     then "cp -f %s %s" (* crush existing file, if any *)
-                     else "cat %s >> %s" (* or just append to it *)
-                    ) out_fn dst_fn in
-          Utls.run_command debug cmd;
-          Sys.remove out_fn;
-          incr mux_count
-        ) popped;
-      printf "processed: %d\r%!" !mux_count (* user feedback *)
-    end
-  | Mux.Cat_into dst_fn ->
-    begin
-      let cmd =
-        sprintf (if !mux_count = 0
-                 then "cp -f %s %s" (* crush existing file, if any *)
-                 else "cat %s >> %s" (* or just append to it *)
-                ) tmp_out_fn dst_fn in
-      Utls.run_command debug cmd;
-      Sys.remove tmp_out_fn;
-      incr mux_count;
-      printf "processed: %d\r%!" !mux_count (* user feedback *)
-    end
+let gather_some mux_count mux_mode (count, tmp_out_fn) =
+  begin
+    match mux_mode with
+    | Mux.Null -> () (* tmp_out_fn is not removed? *)
+    | Mux.Sort_cat_into dst_fn ->
+      begin
+        Squeue.insert (count, tmp_out_fn) out_queue;
+        let popped = Squeue.pop_all out_queue in
+        List.iter (fun out_fn ->
+            let cmd =
+              if !mux_count = 0 then
+                sprintf "mv %s %s" out_fn dst_fn
+              else
+                sprintf "cat %s >> %s; rm %s" out_fn dst_fn out_fn in
+            Utls.run_command !Flags.debug cmd;
+            incr mux_count
+          ) popped
+      end
+    | Mux.Cat_into dst_fn ->
+      begin
+        let cmd =
+          if !mux_count = 0 then
+            sprintf "mv %s %s" tmp_out_fn dst_fn
+          else
+            sprintf "cat %s >> %s; rm %s" tmp_out_fn dst_fn tmp_out_fn in
+        Utls.run_command !Flags.debug cmd;
+        incr mux_count
+      end
+  end;
+  printf "processed: %d\r%!" !mux_count (* user feedback *)
 
 let main () =
   Log.color_on ();
@@ -159,7 +158,7 @@ let main () =
               (cat/sorted_cat/null; default=cat)\n"
        Sys.argv.(0);
      exit 1);
-  let debug = CLI.get_set_bool ["-v";"--verbose"] args in
+  Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
     | None -> stdin
     | Some fn -> open_in fn in
@@ -182,8 +181,8 @@ let main () =
      of chunks per job *)
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
-    ~work:(process_some debug cmd)
-    ~mux:(gather_some debug (ref 0) mux);
+    ~work:(process_some cmd)
+    ~mux:(gather_some (ref 0) mux);
   printf "\n";
   close_in in_chan
 
