@@ -177,10 +177,10 @@ let command_exists (cmd: string): string option =
 let run_command (debug: bool) (cmd: string): unit =
   if debug then Log.info "run_command: %s" cmd;
   match Unix.system cmd with
-  | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; exit 1)
-  | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; exit 1)
+  | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; assert(false))
+  | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; assert(false))
   | Unix.WEXITED i when i <> 0 ->
-    (Log.fatal "run_command: exit %d: %s" i cmd; exit 1)
+    (Log.fatal "run_command: exit %d: %s" i cmd; assert(false))
   | Unix.WEXITED _ (* i = 0 then *) -> ()
 
 let get_env (env_var: string): string option =
