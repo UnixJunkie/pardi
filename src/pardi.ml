@@ -98,6 +98,7 @@ let process_some debug cmd (count, tmp_in_fn) =
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   Utls.run_command debug cmd'';
+  Sys.remove tmp_in_fn;
   (count, tmp_out_fn)
 
 (* in case we need to preserve input order *)
