@@ -81,7 +81,11 @@ let read_some buff count csize input demux () =
           done
         with End_of_file -> ()
     );
-  if !read = 0 then raise Parany.End_of_input;
+  if !read = 0 then
+    begin
+      Sys.remove tmp_fn;
+      raise Parany.End_of_input;
+    end;
   (* return item count and temp filename *)
   (* the count will be useful if the user wants to preserve input order *)
   let res = (!count, tmp_fn) in
