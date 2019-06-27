@@ -24,3 +24,9 @@ rm -f data/still_decoys.mol2
 ./pardi -i data/decoys.mol2 -o data/still_decoys.mol2 \
         -d 's:@<TRIPOS>MOLECULE' -w 'cp %IN %OUT'
 grep -c '@<TRIPOS>MOLECULE' data/decoys.mol2 data/still_decoys.mol2
+
+# test sorted cat mux mode
+rm -f data/maybe_decoys.mol2
+./pardi -i data/decoys.mol2 -o data/maybe_decoys.mol2 \
+        -d b:1000 -w 'cp %IN %OUT' -m s
+diff -q data/decoys.mol2 data/maybe_decoys.mol2
