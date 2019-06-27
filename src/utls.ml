@@ -174,14 +174,21 @@ let command_exists (cmd: string): string option =
   else
     None
 
+exception Signaled
+exception Stopped
+exception Exit_not_null
+
 let run_command (debug: bool) (cmd: string): unit =
   if debug then Log.info "run_command: %s" cmd;
   match Unix.system cmd with
-  | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; assert(false))
-  | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; assert(false))
-  | Unix.WEXITED i when i <> 0 ->
-    (Log.fatal "run_command: exit %d: %s" i cmd; assert(false))
-  | Unix.WEXITED _ (* i = 0 then *) -> ()
+  | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; raise Signaled)
+  | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; raise Stopped)
+  | Unix.WEXITED i when i = 0 -> ()
+  | Unix.WEXITED i -> (* i <> 0 *)
+    begin
+      Log.fatal "run_command: exit %d: %s" i cmd;
+      raise Exit_not_null
+    end
 
 let get_env (env_var: string): string option =
   try Some (Sys.getenv env_var)
