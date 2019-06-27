@@ -150,8 +150,8 @@ let filter_lines_of_file fn p =
   L.filter p (lines_of_file fn)
 
 (* get the first line (stripped) output by given command *)
-let get_command_output (cmd: string): string =
-  Log.info "get_command_output: %s" cmd;
+let get_command_output (debug: bool) (cmd: string): string =
+  if debug then Log.info "get_command_output: %s" cmd;
   let _stat, output = BatUnix.run_and_read cmd in
   match BatString.split_on_char '\n' output with
   | first_line :: _others -> first_line
@@ -170,7 +170,7 @@ let fork_out_cmd (cmd: string): int =
 let command_exists (cmd: string): string option =
   let where_is_cmd = "which " ^ cmd in
   if Unix.system (where_is_cmd ^ " 2>&1 > /dev/null") = Unix.WEXITED 0 then
-    Some (get_command_output where_is_cmd)
+    Some (get_command_output !Flags.debug where_is_cmd)
   else
     None
 
