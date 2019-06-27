@@ -101,7 +101,7 @@ let process_some job_dir cmd (count, tmp_in_fn) =
   let tmp_out_fn = sprintf "%s/pardi_out_%09d" job_dir count in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
-  let cmd''' = sprintf "%s; rm %s" cmd'' tmp_in_fn in
+  let cmd''' = sprintf "%s; rm -f %s" cmd'' tmp_in_fn in
   Utls.run_command !Flags.debug cmd''';
   (count, tmp_out_fn)
 
@@ -121,7 +121,7 @@ let gather_some mux_count mux_mode (count, tmp_out_fn) =
               if !mux_count = 0 then
                 sprintf "mv %s %s" out_fn dst_fn
               else
-                sprintf "cat %s >> %s; rm %s" out_fn dst_fn out_fn in
+                sprintf "cat %s >> %s; rm -f %s" out_fn dst_fn out_fn in
             Utls.run_command !Flags.debug cmd;
             incr mux_count
           ) popped
@@ -132,7 +132,7 @@ let gather_some mux_count mux_mode (count, tmp_out_fn) =
           if !mux_count = 0 then
             sprintf "mv %s %s" tmp_out_fn dst_fn
           else
-            sprintf "cat %s >> %s; rm %s" tmp_out_fn dst_fn tmp_out_fn in
+            sprintf "cat %s >> %s; rm -f %s" tmp_out_fn dst_fn tmp_out_fn in
         Utls.run_command !Flags.debug cmd;
         incr mux_count
       end
