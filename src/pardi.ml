@@ -35,9 +35,9 @@ let rec read_one_block
 let read_buff = ref (Bytes.create 0)
 let read_fd = ref (Unix.descr_of_in_channel stdin)
 
-let read_some buff count csize input demux () =
+let read_some job_dir buff count csize input demux () =
   let read = ref 0 in
-  let tmp_fn = Fn.temp_file (sprintf "pardi_in_%d_" !count) ".txt" in
+  let tmp_fn = sprintf "%s/pardi_in_%09d" job_dir !count in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
       | Demux.Bytes n ->
@@ -95,10 +95,10 @@ let read_some buff count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some cmd (count, tmp_in_fn) =
+let process_some job_dir cmd (count, tmp_in_fn) =
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
-  let tmp_out_fn = Fn.temp_file (sprintf "pardi_out_%d_" count) ".txt" in
+  let tmp_out_fn = sprintf "%s/pardi_out_%09d" job_dir count in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   let cmd''' = sprintf "%s; rm %s" cmd'' tmp_in_fn in
@@ -179,11 +179,15 @@ let main () =
   CLI.finalize ();
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
+  let job_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
+  Log.info "job_dir: %s" job_dir;
   Parany.run ~verbose:false ~csize:1 ~nprocs
-    ~demux:(read_some (Buffer.create 1024) (ref 0) csize in_chan demux)
-    ~work:(process_some cmd)
+    ~demux:(read_some job_dir (Buffer.create 1024) (ref 0) csize in_chan demux)
+    ~work:(process_some job_dir cmd)
     ~mux:(gather_some (ref 0) mux);
   printf "\n";
+  if not !Flags.debug then
+    Utls.run_command !Flags.debug (sprintf "rm -rf %s" job_dir);
   close_in in_chan
 
 let () = main ()
