@@ -181,6 +181,8 @@ let main () =
      of chunks per job *)
   let job_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "job_dir: %s" job_dir;
+  Parany.set_copy_on_work ();
+  Parany.set_copy_on_mux ();
   Parany.run ~verbose:false ~csize:1 ~nprocs
     ~demux:(read_some job_dir (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some job_dir cmd)
