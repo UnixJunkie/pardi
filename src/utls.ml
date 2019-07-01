@@ -1,8 +1,8 @@
 
 open Printf
 
+module Fn = Filename
 module L = BatList
-
 
 let get_nprocs () =
   let _stat, out_str = BatUnix.run_and_read "getconf _NPROCESSORS_ONLN" in
@@ -205,16 +205,6 @@ let find_command (exe: string) (env_var: string): string option =
                          put it in your PATH or setup the \
                          %s env. var. to point to it" exe env_var;
                None)
-
-let filename_is_absolute fn =
-  not (Filename.is_relative fn)
-
-let relative_to_absolute fn =
-  if Filename.is_relative fn then
-    let cwd = Sys.getcwd () in
-    Filename.concat cwd fn
-  else
-    fn
 
 (* remove the prefix if it is there, or do nothing if it is not *)
 let remove_string_prefix prfx str =
@@ -420,3 +410,10 @@ let really_read (fd: Unix.file_descr) (buff: bytes) (length: int): int =
   match loop 0 with
   | 0 -> raise End_of_file
   | n -> n
+
+let absolute_filename fn =
+  if Fn.is_relative fn then
+    let cwd = Sys.getcwd () in
+    sprintf "%s/%s" cwd fn
+  else
+    fn

@@ -35,9 +35,11 @@ let rec read_one_block
 let read_buff = ref (Bytes.create 0)
 let read_fd = ref (Unix.descr_of_in_channel stdin)
 
-let read_some job_dir buff count csize input demux () =
+let read_some work_dir buff count csize input demux () =
   let read = ref 0 in
-  let tmp_fn = sprintf "%s/pardi_in_%09d" job_dir !count in
+  let job_dir = sprintf "%s/%d" work_dir !count in
+  Unix.mkdir job_dir 0o700;
+  let tmp_fn = sprintf "%s/in" job_dir in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
       | Demux.Bytes n ->
@@ -95,10 +97,12 @@ let read_some job_dir buff count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some job_dir cmd (count, tmp_in_fn) =
+let process_some cmd (count, tmp_in_fn) =
+  let job_dir = Fn.dirname tmp_in_fn in
+  Unix.chdir job_dir;
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
-  let tmp_out_fn = sprintf "%s/pardi_out_%09d" job_dir count in
+  let tmp_out_fn = sprintf "%s/out" job_dir in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   let cmd''' = sprintf "%s; rm -f %s" cmd'' tmp_in_fn in
@@ -162,7 +166,11 @@ let main () =
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
     | None -> stdin
     | Some fn -> open_in fn in
-  let out_fn = CLI.get_string_def ["-o";"--output"] args "/dev/stdout" in
+  let out_fn =
+    (* must be converted to an absolute filename,
+       since each job is chdir to a separate directory *)
+    let fn = CLI.get_string_def ["-o";"--output"] args "/dev/stdout" in
+    Utls.absolute_filename fn in
   let cmd = CLI.get_string ["-w";"--work"] args in
   let nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
     | None -> Utls.get_nprocs ()
@@ -179,17 +187,17 @@ let main () =
   CLI.finalize ();
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
-  let job_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
-  Log.info "job_dir: %s" job_dir;
+  let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
+  Log.info "work_dir: %s" work_dir;
   Parany.set_copy_on_work ();
   Parany.set_copy_on_mux ();
   Parany.run ~verbose:false ~csize:1 ~nprocs
-    ~demux:(read_some job_dir (Buffer.create 1024) (ref 0) csize in_chan demux)
-    ~work:(process_some job_dir cmd)
+    ~demux:(read_some work_dir (Buffer.create 1024) (ref 0) csize in_chan demux)
+    ~work:(process_some cmd)
     ~mux:(gather_some (ref 0) mux);
   printf "\n";
   if not !Flags.debug then
-    Utls.run_command !Flags.debug (sprintf "rm -rf %s" job_dir);
+    Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
   close_in in_chan
 
 let () = main ()
