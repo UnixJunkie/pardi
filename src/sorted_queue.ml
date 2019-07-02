@@ -2,7 +2,7 @@
 (* a queue so that results coming in random order are put back in input order
    before being muxed out (for the Mux.Sort_cat_into output mode) *)
 
-module Ht = Hashtbl
+module Ht = BatHashtbl
 
 type 'a t = { mutable next_rank: int;
               q: (int, 'a) Ht.t }
@@ -17,7 +17,7 @@ let insert (rank, elt) q =
   Ht.add q.q rank elt
 
 let pop q =
-  match Ht.find_opt q.q q.next_rank with
+  match Ht.find_option q.q q.next_rank with
   | None -> None
   | Some x ->
     begin
