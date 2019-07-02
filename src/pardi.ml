@@ -35,11 +35,13 @@ let rec read_one_block
 let read_buff = ref (Bytes.create 0)
 let read_fd = ref (Unix.descr_of_in_channel stdin)
 
-let read_some work_dir buff count csize input demux () =
+let read_some work_dir maybe_input_ext buff count csize input demux () =
   let read = ref 0 in
   let job_dir = sprintf "%s/%d" work_dir !count in
   Unix.mkdir job_dir 0o700;
-  let tmp_fn = sprintf "%s/in" job_dir in
+  let tmp_fn = match maybe_input_ext with
+    | None -> sprintf "%s/in" job_dir
+    | Some ext -> sprintf "%s/in.%s" job_dir ext in
   Utls.with_out_file tmp_fn (fun out ->
       match demux with
       | Demux.Bytes n ->
@@ -97,12 +99,14 @@ let read_some work_dir buff count csize input demux () =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some cmd (count, tmp_in_fn) =
+let process_some maybe_output_ext cmd (count, tmp_in_fn) =
   let job_dir = Fn.dirname tmp_in_fn in
   Unix.chdir job_dir;
   assert(Utls.regexp_in_string input_fn_tag cmd);
   let cmd' = Str.replace_first input_fn_tag tmp_in_fn cmd in
-  let tmp_out_fn = sprintf "%s/out" job_dir in
+  let tmp_out_fn = match maybe_output_ext with
+    | None -> sprintf "%s/out" job_dir
+    | Some ext -> sprintf "%s/out.%s" job_dir ext in
   assert(Utls.regexp_in_string output_fn_tag cmd');
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   let cmd''' = sprintf "%s; rm -f %s" cmd'' tmp_in_fn in
@@ -153,19 +157,23 @@ let main () =
               %s ...\n  \
               {-i|--input} <file>: where to read from (default=stdin)\n  \
               {-o|--output} <file>: where to write to (default=stdout)\n  \
-              {-n|--nprocs} <int>: max jobs in parallel (default=all cores)\n  \
-              {-c|--chunks} <int>: how many chunks per job (default=1)\n  \
-              {-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}: how to cut input \n  \
+              [{-n|--nprocs} <int>]: max jobs in parallel (default=all cores)\n  \
+              [{-c|--chunks} <int>]: how many chunks per job (default=1)\n  \
+              [{-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}]: how to cut input \n  \
               file into chunks (line/bytes/regexp/sep_line; default=line)\n  \
               {-w|--work} <string>: command to execute on each chunk\n  \
-              {-m|--mux} {c|s|n}: how to mux job results in output file\n  \
-              (cat/sorted_cat/null; default=cat)\n"
+              [{-m|--mux} {c|s|n}]: how to mux job results in output file\n  \
+              (cat/sorted_cat/null; default=cat)\n  \
+              [{-ie|--input-ext} <string>]: append file extension to work input files\n  \
+              [{-oe|--output-ext} <string>]: append file extension to work output files\n"
        Sys.argv.(0);
      exit 1);
   Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
   let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
     | None -> stdin
     | Some fn -> open_in fn in
+  let maybe_input_ext = CLI.get_string_opt ["-ie";"--input-ext"] args in
+  let maybe_output_ext = CLI.get_string_opt ["-oe";"--output-ext"] args in
   let out_fn =
     (* must be converted to an absolute filename,
        since each job is chdir to a separate directory *)
@@ -192,8 +200,9 @@ let main () =
   Parany.set_copy_on_work ();
   Parany.set_copy_on_mux ();
   Parany.run ~verbose:false ~csize:1 ~nprocs
-    ~demux:(read_some work_dir (Buffer.create 1024) (ref 0) csize in_chan demux)
-    ~work:(process_some cmd)
+    ~demux:(read_some work_dir maybe_input_ext
+              (Buffer.create 1024) (ref 0) csize in_chan demux)
+    ~work:(process_some maybe_output_ext cmd)
     ~mux:(gather_some (ref 0) mux);
   printf "\n";
   if not !Flags.debug then
