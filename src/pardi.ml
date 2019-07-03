@@ -116,7 +116,7 @@ let process_some maybe_output_ext cmd (count, tmp_in_fn) =
 (* in case we need to preserve input order *)
 let out_queue = Sorted_queue.create ()
 
-let gather_some mux_count mux_mode (count, tmp_out_fn) =
+let gather_some start_t mux_count mux_mode (count, tmp_out_fn) =
   begin
     match mux_mode with
     | Mux.Null -> () (* tmp_out_fn is not removed? *)
@@ -145,11 +145,14 @@ let gather_some mux_count mux_mode (count, tmp_out_fn) =
         incr mux_count
       end
   end;
-  printf "processed: %d\r%!" !mux_count (* user feedback *)
+  let now = Unix.gettimeofday () in
+  let freq = (float !mux_count) /. (now -. start_t) in
+  printf "done: %d freq: %.1f\r%!" !mux_count freq (* user feedback *)
 
 let main () =
   Log.color_on ();
   Log.set_log_level Log.INFO;
+  let start_t = Unix.gettimeofday () in
   let argc, args = CLI.init () in
   let show_help = CLI.get_set_bool ["-h";"--help"] args in
   if argc = 1 || show_help then
@@ -203,7 +206,7 @@ let main () =
     ~demux:(read_some work_dir maybe_input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some maybe_output_ext cmd)
-    ~mux:(gather_some (ref 0) mux);
+    ~mux:(gather_some start_t (ref 0) mux);
   printf "\n";
   if not !Flags.debug then
     Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
