@@ -163,15 +163,19 @@ let main () =
               %s ...\n  \
               {-i|--input} <file>: where to read from (default=stdin)\n  \
               {-o|--output} <file>: where to write to (default=stdout)\n  \
-              [{-n|--nprocs} <int>]: max jobs in parallel (default=all cores)\n  \
+              [{-n|--nprocs} <int>]: max jobs in parallel \
+              (default=all cores)\n  \
               [{-c|--chunks} <int>]: how many chunks per job (default=1)\n  \
-              [{-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}]: how to cut input \n  \
+              [{-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}]: \
+              how to cut input \n  \
               file into chunks (line/bytes/regexp/sep_line; default=line)\n  \
               {-w|--work} <string>: command to execute on each chunk\n  \
               [{-m|--mux} {c|s|n}]: how to mux job results in output file\n  \
               (cat/sorted_cat/null; default=cat)\n  \
-              [{-ie|--input-ext} <string>]: append file extension to work input files\n  \
-              [{-oe|--output-ext} <string>]: append file extension to work output files\n  \
+              [{-ie|--input-ext} <string>]: append file extension to work \
+              input files\n  \
+              [{-oe|--output-ext} <string>]: append file extension to work \
+              output files\n  \
               [{-t|--total} <int>]: total number of items in input file\n"
        Sys.argv.(0);
      exit 1);
