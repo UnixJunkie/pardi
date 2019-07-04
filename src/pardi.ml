@@ -147,11 +147,10 @@ let gather_some total_items start_t mux_count mux_mode (count, tmp_out_fn) =
   end;
   (* user feedback *)
   if total_items = 0 then
-    let now = Unix.gettimeofday () in
-    let freq = (float !mux_count) /. (now -. start_t) in
-    printf "done: %d freq: %.1f\r%!" !mux_count freq
+    let delta_t = Unix.gettimeofday () -. start_t in
+    printf "done: %d freq: %.1f\r%!" !mux_count (float !mux_count /. delta_t)
   else
-    printf "done: %.2f\r%!" (float !mux_count /. float total_items)
+    printf "done: %.2f%%\r%!" (100. *. (float !mux_count /. float total_items))
 
 let main () =
   Log.color_on ();
