@@ -116,7 +116,7 @@ let process_some maybe_output_ext cmd (count, tmp_in_fn) =
 (* in case we need to preserve input order *)
 let out_queue = Sorted_queue.create ()
 
-let gather_some start_t mux_count mux_mode (count, tmp_out_fn) =
+let gather_some total_items start_t mux_count mux_mode (count, tmp_out_fn) =
   begin
     match mux_mode with
     | Mux.Null -> () (* tmp_out_fn is not removed? *)
@@ -145,9 +145,13 @@ let gather_some start_t mux_count mux_mode (count, tmp_out_fn) =
         incr mux_count
       end
   end;
-  let now = Unix.gettimeofday () in
-  let freq = (float !mux_count) /. (now -. start_t) in
-  printf "done: %d freq: %.1f\r%!" !mux_count freq (* user feedback *)
+  (* user feedback *)
+  if total_items = 0 then
+    let now = Unix.gettimeofday () in
+    let freq = (float !mux_count) /. (now -. start_t) in
+    printf "done: %d freq: %.1f\r%!" !mux_count freq
+  else
+    printf "done: %.2f\r%!" (float !mux_count /. float total_items)
 
 let main () =
   Log.color_on ();
@@ -168,7 +172,8 @@ let main () =
               [{-m|--mux} {c|s|n}]: how to mux job results in output file\n  \
               (cat/sorted_cat/null; default=cat)\n  \
               [{-ie|--input-ext} <string>]: append file extension to work input files\n  \
-              [{-oe|--output-ext} <string>]: append file extension to work output files\n"
+              [{-oe|--output-ext} <string>]: append file extension to work output files\n  \
+              [{-t|--total} <int>]: total number of items in input file\n"
        Sys.argv.(0);
      exit 1);
   Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
@@ -189,6 +194,9 @@ let main () =
   let csize = match CLI.get_int_opt ["-c";"--chunks"] args with
     | None -> 1
     | Some n -> n in
+  let total_items =
+    let n = CLI.get_int_def ["-t";"--total"] args 0 in
+    BatFloat.round_to_int (float n /. float csize) in
   let demux =
     let demux_str = CLI.get_string_def ["-d";"--demux"] args "l" in
     Demux.of_string demux_str in
@@ -206,7 +214,7 @@ let main () =
     ~demux:(read_some work_dir maybe_input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some maybe_output_ext cmd)
-    ~mux:(gather_some start_t (ref 0) mux);
+    ~mux:(gather_some total_items start_t (ref 0) mux);
   printf "\n";
   if not !Flags.debug then
     Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
