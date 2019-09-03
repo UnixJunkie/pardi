@@ -166,6 +166,7 @@ let main () =
               how to cut input \n  \
               file into chunks (line/bytes/regexp/sep_line; default=line)\n  \
               {-w|--work} <string>: command to execute on each chunk\n  \
+              %%IN and %%OUT are special tokens\n  \
               [{-m|--mux} {c|s|n}]: how to mux job results in output file\n  \
               (cat/sorted_cat/null; default=cat)\n  \
               [{-ie|--input-ext} <string>]: append file extension to work \
