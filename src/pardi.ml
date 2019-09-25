@@ -94,6 +94,20 @@ let read_some work_dir input_ext buff count csize input demux () =
   incr count;
   res
 
+(* compute number of chunks in input file *)
+let nb_chunks demux fn =
+  match demux with
+  | Demux.Bytes n -> Utls.ceil ((float (Utls.file_size fn)) /. (float n))
+  | Demux.Line -> Utls.file_nb_lines fn
+  | Demux.Line_sep l -> Utls.file_count_matching_lines l fn
+  | Demux.Reg r ->
+    let count = ref 0 in
+    Utls.iter_on_lines_of_file fn (fun line ->
+        if Str.string_match r line 0 then
+          incr count
+      );
+    !count
+
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
@@ -157,7 +171,7 @@ let main () =
   if argc = 1 || show_help then
     (eprintf "usage:\n\
               %s ...\n  \
-              {-i|--input} <file>: where to read from (default=stdin)\n  \
+              {-i|--input} <file>: where to read from\n  \
               {-o|--output} <file>: where to write to (default=stdout)\n  \
               [{-n|--nprocs} <int>]: max jobs in parallel \
               (default=all cores)\n  \
@@ -172,14 +186,12 @@ let main () =
               [{-ie|--input-ext} <string>]: append file extension to work \
               input files\n  \
               [{-oe|--output-ext} <string>]: append file extension to work \
-              output files\n  \
-              [{-t|--total} <int>]: total number of items in input file\n"
+              output files\n"
        Sys.argv.(0);
      exit 1);
   Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
-  let in_chan = match CLI.get_string_opt ["-i";"--input"] args with
-    | None -> stdin
-    | Some fn -> open_in fn in
+  let input_fn = CLI.get_string ["-i";"--input"] args in
+  let in_chan = open_in input_fn in
   let input_ext = CLI.get_string_def ["-ie";"--input-ext"] args "" in
   let output_ext = CLI.get_string_def ["-oe";"--output-ext"] args "" in
   let out_fn =
@@ -194,9 +206,6 @@ let main () =
   let csize = match CLI.get_int_opt ["-c";"--chunks"] args with
     | None -> 1
     | Some n -> n in
-  let total_items =
-    let n = CLI.get_int_def ["-t";"--total"] args 0 in
-    BatFloat.round_to_int (float n /. float csize) in
   let demux =
     let demux_str = CLI.get_string_def ["-d";"--demux"] args "l" in
     Demux.of_string demux_str in
@@ -204,6 +213,9 @@ let main () =
     let mux_str = CLI.get_string_def ["-m";"--mux"] args "c" in
     Mux.of_string out_fn mux_str in
   CLI.finalize ();
+  Log.info "computing input file #chunks...";
+  let total_items = nb_chunks demux input_fn in
+  Log.info "%d" total_items;
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
