@@ -417,3 +417,15 @@ let absolute_filename fn =
     sprintf "%s/%s" cwd fn
   else
     fn
+
+(* get the file size (in bytes) *)
+let file_size fn =
+  (Unix.stat fn).st_size
+
+(* <=> wc -l fn *)
+let file_nb_lines fn =
+  let res = get_command_output false ("wc -l " ^ fn) in
+  Scanf.sscanf res "%d %s" (fun nb_lines fn' ->
+      assert(fn = fn');
+      nb_lines
+    )
