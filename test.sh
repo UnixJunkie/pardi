@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -x
+set -u
 
 # rm -f data/decoys_std.smi
 # time (standardiser -i data/decoys.smi -o data/decoys_std.smi 2>&1) > /dev/null
@@ -28,5 +29,5 @@ grep -c '@<TRIPOS>MOLECULE' data/decoys.mol2 data/still_decoys.mol2
 # test sorted cat mux mode
 rm -f data/decoys2.mol2
 ./pardi -i data/decoys.mol2 -o data/decoys2.mol2 \
-        -d b:10000 -w 'cp %IN %OUT' -m s -t 475 # there are 475 blocks of 10_000 B
+        -d b:10000 -w 'cp %IN %OUT' -m s
 diff -q data/decoys.mol2 data/decoys2.mol2
