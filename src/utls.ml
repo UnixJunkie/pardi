@@ -434,3 +434,8 @@ let file_nb_lines fn =
 let file_count_matching_lines l fn =
   let res = get_command_output false ("grep -c -x " ^ l ^ " " ^ fn) in
   Scanf.sscanf res "%d" (fun count -> count)
+
+(* Float.ceil should return an int...
+   ceil f: least integer value greater than or equal to f. *)
+let ceil (f: float): int =
+  Float.(to_int (ceil f))
