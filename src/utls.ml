@@ -429,3 +429,8 @@ let file_nb_lines fn =
       assert(fn = fn');
       nb_lines
     )
+
+(* <=> grep -c -x PATTERN FILENAME *)
+let file_count_matching_lines l fn =
+  let res = get_command_output false ("grep -c -x " ^ l ^ " " ^ fn) in
+  Scanf.sscanf res "%d" (fun count -> count)
