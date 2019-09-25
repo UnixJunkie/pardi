@@ -160,7 +160,11 @@ let gather_some total_items start_t mux_count mux_mode (count, tmp_out_fn) =
     let delta_t = Unix.gettimeofday () -. start_t in
     printf "done: %d freq: %.1f\r%!" !mux_count (float !mux_count /. delta_t)
   else
+  if !mux_count <> total_items then
     printf "done: %.2f%%\r%!" (100. *. (float !mux_count /. float total_items))
+  else
+    (* "\027[2K": ANSI escape code to clear current line *)
+    printf "\027[2Kdone: 100%%\n%!"
 
 let main () =
   Log.color_on ();
@@ -227,7 +231,6 @@ let main () =
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some output_ext cmd)
     ~mux:(gather_some total_items start_t (ref 0) mux);
-  printf "\n";
   if not !Flags.debug then
     Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
   close_in in_chan
