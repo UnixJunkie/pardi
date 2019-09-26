@@ -1,6 +1,13 @@
 
 module DH = Cryptokit.DH
 
+(* messages that will be exchanged during KE *)
+type from_serv =
+  | Serv_to_CLI_DHKE_params_bcast of Cryptokit.DH.parameters
+  | Serv_to_CLI_DHKE_handshake of string
+type from_cli =
+  | CLI_to_Serv_DHKE_handshake of string
+
 let signing_key_bit_len = 160
 let signing_key_bytes_len = signing_key_bit_len / 8
 
