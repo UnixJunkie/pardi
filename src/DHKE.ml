@@ -57,6 +57,6 @@ let process_received_handshake_message params secret msg =
   let signing_key =
     String.sub sign_encrypt_keys 0 signing_key_bytes_len in
   let encryption_key =
-    String.sub sign_encrypt_keys signing_key_bytes_len encryption_key_length in
+    String.sub sign_encrypt_keys signing_key_bytes_len encryption_key_bytes_len in
   Cryptokit.wipe_string sign_encrypt_keys;
   (signing_key, encryption_key)
