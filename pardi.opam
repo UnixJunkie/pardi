@@ -13,6 +13,8 @@ depends: [
   "dolog"
   "parany"
   "minicli"
+  "lz4"
+  "cryptokit"
 ]
 synopsis: "Parallel and distributed execution of commands"
 description: """
