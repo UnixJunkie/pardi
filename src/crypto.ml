@@ -64,32 +64,16 @@ let check_sign (sign_key: string) (msg: string): string option =
     else
       Some signless
 
-(* FBR: move to chacha20 *)
-let encrypt (cipher_key: string) (msg: string): string =
-  assert(String.length cipher_key >= 16);
-  let enigma =
-    new Cryptokit.Block.cipher_padded_encrypt Cryptokit.Padding.length
-      (new Cryptokit.Block.cbc_encrypt
-        (new Cryptokit.Block.blowfish_encrypt cipher_key))
-  in
-  enigma#put_string msg;
-  enigma#finish;
-  let res = enigma#get_string in
-  enigma#wipe;
-  res
-
-(* FBR: move to chacha20 *)
-let decrypt (cipher_key: string) (msg: string): string option =
-  let turing =
-    new Cryptokit.Block.cipher_padded_decrypt Cryptokit.Padding.length
-      (new Cryptokit.Block.cbc_decrypt
-        (new Cryptokit.Block.blowfish_decrypt cipher_key))
-  in
-  turing#put_string msg;
-  turing#finish;
-  let res = turing#get_string in
-  turing#wipe;
-  Some res
+(* with chacha20, encryption is the same operation as decryption *)
+let transform (cipher_key: string) (msg: string): string =
+  assert(String.length cipher_key = 16);
+  let n = String.length msg in
+  let src = Bytes.unsafe_of_string msg in
+  let dst = Bytes.create n in
+  let chacha20 = new Cryptokit.Stream.chacha20 cipher_key in
+  chacha20#transform src 0 dst 0 n;
+  chacha20#wipe;
+  Bytes.unsafe_to_string dst
 
 (* encrypt-then-sign scheme *)
 let encode (sign_key: string) (cipher_key: string)
@@ -105,7 +89,7 @@ let encode (sign_key: string) (cipher_key: string)
   let nonce = Nonce_store.fresh counter in
   (* Log.debug "enc. nonce = %s" nonce; *)
   let s_n_m = (Bytes.to_string salt) ^ nonce ^ "|" ^ maybe_compressed in
-  let encrypted = encrypt cipher_key s_n_m in
+  let encrypted = transform cipher_key s_n_m in
   (sign sign_key encrypted) ^ encrypted
 
 (* check-sign-then-decrypt scheme *)
@@ -113,22 +97,19 @@ let decode (sign_key: string) (cipher_key: string) (s: string): 'a option =
   match check_sign sign_key s with
   | None -> None
   | Some encrypted ->
-    match decrypt cipher_key encrypted with
-    | None ->
-      ignore_fst (Log.warn "Crypto.decode: decryption failed") None
-    | Some str ->
-      (* leading salt (8 first bytes) is ignored *)
-      (* let salt = String.sub str 0 8 in
+    let str = transform cipher_key encrypted in
+    (* leading salt (8 first bytes) is ignored *)
+    (* let salt = String.sub str 0 8 in
        * let salt_hex = Utils.convert `To_hexa salt in
        * Log.debug "dec. salt = %s" salt_hex; *)
-      let n = String.length str in
-      let nonce_end = String.index_from str 8 '|' in
-      assert(nonce_end > 8 && nonce_end < n);
-      let nonce = String.sub str 8 (nonce_end - 8) in
-      (* Log.debug "dec. nonce = %s" nonce; *)
-      if Nonce_store.is_fresh nonce then
-        let compressed = BatString.lchop ~n:(nonce_end + 1) str in
-        let u = uncompress compressed in
-        Some (Marshal.from_string u 0: 'a)
-      else
-        ignore_fst (Log.warn "Crypto.decode: nonce already seen: %s" nonce) None
+    let n = String.length str in
+    let nonce_end = String.index_from str 8 '|' in
+    assert(nonce_end > 8 && nonce_end < n);
+    let nonce = String.sub str 8 (nonce_end - 8) in
+    (* Log.debug "dec. nonce = %s" nonce; *)
+    if Nonce_store.is_fresh nonce then
+      let compressed = BatString.lchop ~n:(nonce_end + 1) str in
+      let u = uncompress compressed in
+      Some (Marshal.from_string u 0: 'a)
+    else
+      ignore_fst (Log.warn "Crypto.decode: nonce already seen: %s" nonce) None
