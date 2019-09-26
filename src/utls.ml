@@ -166,14 +166,6 @@ let fork_out_cmd (cmd: string): int =
   | -1 -> (* error *) (Log.fatal "fork_out_cmd: fork failed"; exit 1)
   | pid -> pid
 
-(* return full path of command, if found in PATH, none else *)
-let command_exists (cmd: string): string option =
-  let where_is_cmd = "which " ^ cmd in
-  if Unix.system (where_is_cmd ^ " 2>&1 > /dev/null") = Unix.WEXITED 0 then
-    Some (get_command_output !Flags.debug where_is_cmd)
-  else
-    None
-
 exception Signaled
 exception Stopped
 exception Exit_not_null
@@ -189,22 +181,6 @@ let run_command (debug: bool) (cmd: string): unit =
       Log.fatal "run_command: exit %d: %s" i cmd;
       raise Exit_not_null
     end
-
-let get_env (env_var: string): string option =
-  try Some (Sys.getenv env_var)
-  with Not_found -> None
-
-(* look for exe in PATH then given env. var *)
-let find_command (exe: string) (env_var: string): string option =
-  match command_exists exe with
-  | Some cmd -> Some cmd
-  | None ->
-    match get_env env_var with
-    | Some cmd -> Some cmd
-    | None -> (Log.warn "%s not found in PATH; \
-                         put it in your PATH or setup the \
-                         %s env. var. to point to it" exe env_var;
-               None)
 
 (* remove the prefix if it is there, or do nothing if it is not *)
 let remove_string_prefix prfx str =
