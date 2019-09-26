@@ -24,16 +24,21 @@ end
 
 let compression_flag = ref true
 
-(* FBR: use LZ4; look into lz4_chans *)
-let compress msg =
+let compress (msg: string): string =
   if !compression_flag then
-    failwith "not implemented yet"
+    let buff = LZ4.Bytes.compress (Bytes.unsafe_of_string msg) in
+    Bytes.unsafe_to_string buff
   else
     msg
 
-let uncompress msg =
+let uncompress (msg: string): string =
   if !compression_flag then
-    failwith "not implemented yet"
+    let n = String.length msg in
+    let buff = Bytes.unsafe_of_string msg in
+    (* WARNING: might raise Corrupted if doesn't decompress into
+       4*n bytes or less *)
+    let uncompressed = LZ4.Bytes.decompress ~length:(4*n) buff in
+    Bytes.unsafe_to_string uncompressed
   else
     msg
 
