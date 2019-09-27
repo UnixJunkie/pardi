@@ -89,7 +89,7 @@ let encode (sign_key: string) (cipher_key: string)
   (* Log.debug "enc. salt = %s" salt_hex; *)
   let nonce = Nonce_store.fresh counter in
   (* Log.debug "enc. nonce = %s" nonce; *)
-  let s_n_m = (Bytes.to_string salt) ^ nonce ^ "|" ^ maybe_compressed in
+  let s_n_m = (Bytes.unsafe_to_string salt) ^ nonce ^ "|" ^ maybe_compressed in
   let encrypted = transform cipher_key s_n_m in
   (sign sign_key encrypted) ^ encrypted
 
