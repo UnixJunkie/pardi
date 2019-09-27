@@ -69,16 +69,16 @@ let check_sign (sign_key: string) (msg: string): string option =
     else
       Some signless
 
-(* with chacha20, encryption is the same operation as decryption *)
+(* with chacha20, encryption is the same operation as decryption (xoring with
+   a pseudo random stream) *)
 let transform (cipher_key: string) (msg: string): string =
   assert(String.length cipher_key = 16);
   let n = String.length msg in
-  let src = Bytes.unsafe_of_string msg in
-  let dst = Bytes.create n in
+  let src_dst = Bytes.of_string msg in
   let chacha20 = new Cryptokit.Stream.chacha20 cipher_key in
-  chacha20#transform src 0 dst 0 n;
+  chacha20#transform src_dst 0 src_dst 0 n;
   chacha20#wipe;
-  Bytes.unsafe_to_string dst
+  Bytes.unsafe_to_string src_dst
 
 (* encrypt-then-sign scheme *)
 let encode (sign_key: string) (cipher_key: string)
