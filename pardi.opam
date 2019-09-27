@@ -18,7 +18,11 @@ depends: [
 ]
 synopsis: "Parallel and distributed execution of commands"
 description: """
-TODO
+Almost like GNU parallel; just better.
+
+Pardi pushes further the point at which you have to use a supercomputer.
+Alternatively, it can be used on a supercomputer to make life in there
+much more fun and productive.
 """
 # url {
 #   src: "https://github.com/UnixJunkie/pardi/archive/XXX.tar.gz"
