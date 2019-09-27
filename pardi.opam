@@ -10,7 +10,7 @@ build: ["dune" "build" "-p" name "-j" jobs]
 depends: [
   "dune" {build}
   "batteries"
-  "dolog"
+  "dolog" {>= "4.0.0"}
   "parany"
   "minicli"
   "lz4"
