@@ -26,19 +26,15 @@ let compression_flag = ref true
 
 let compress (msg: string): string =
   if !compression_flag then
-    let buff = LZ4.Bytes.compress (Bytes.unsafe_of_string msg) in
-    Bytes.unsafe_to_string buff
+    let compressed = Lz4.compress msg in
+    Marshal.to_string compressed [Marshal.No_sharing]
   else
     msg
 
 let uncompress (msg: string): string =
   if !compression_flag then
-    let n = String.length msg in
-    let buff = Bytes.unsafe_of_string msg in
-    (* WARNING: might raise Corrupted if doesn't decompress into
-       4*n bytes or less *)
-    let uncompressed = LZ4.Bytes.decompress ~length:(4*n) buff in
-    Bytes.unsafe_to_string uncompressed
+    let compressed = Marshal.from_string msg 0 in
+    Lz4.decompress compressed
   else
     msg
 
