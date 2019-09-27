@@ -1,5 +1,6 @@
 
 module Ht = BatHashtbl
+module Log = Dolog.Log
 
 (* create fresh nonces / check their freshness *)
 module Nonce_store = struct
@@ -113,4 +114,4 @@ let decode (sign_key: string) (cipher_key: string) (s: string): 'a option =
       let u = uncompress compressed in
       Some (Marshal.from_string u 0: 'a)
     else
-      ignore_fst (Log.warn "Crypto.decode: nonce already seen: %s" nonce) None
+      ignore_fst (Log.error "Crypto.decode: nonce already seen: %s" nonce) None

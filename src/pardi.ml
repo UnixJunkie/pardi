@@ -1,6 +1,7 @@
 
 module CLI = Minicli.CLI
 module Fn = Filename
+module Log = Dolog.Log
 module Squeue = Sorted_queue
 
 open Printf

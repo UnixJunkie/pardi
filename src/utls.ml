@@ -3,6 +3,7 @@ open Printf
 
 module Fn = Filename
 module L = BatList
+module Log = Dolog.Log
 
 let get_nprocs () =
   let _stat, out_str = BatUnix.run_and_read "getconf _NPROCESSORS_ONLN" in
