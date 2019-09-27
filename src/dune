@@ -1,7 +1,7 @@
 
 (library
   (name sec_chan)
-  (modules DHKE crypto)
+  (modules DHKE crypto lz4)
   (libraries cryptokit batteries dolog lz4))
 
 (executables
