@@ -68,17 +68,19 @@ let check_sign (sign_key: string) (msg: string): string option =
 
 (* with chacha20, encryption is the same operation as decryption (xoring with
    a pseudo random stream) *)
-let transform (cipher_key: string) (msg: string): string =
-  assert(String.length cipher_key = 16);
+let transform (cipher_key: string) (stream_offs: int64 ref) (msg: string): string =
   let n = String.length msg in
+  assert(n > 0 && String.length cipher_key = 16 && !stream_offs >= Int64.zero);
   let src_dst = Bytes.of_string msg in
-  let chacha20 = new Cryptokit.Stream.chacha20 cipher_key in
+  let chacha20 = new Cryptokit.Stream.chacha20 ~ctr:!stream_offs cipher_key in
   chacha20#transform src_dst 0 src_dst 0 n;
   chacha20#wipe;
+  (* update stream offset *)
+  stream_offs := Int64.add !stream_offs (Int64.of_int n);
   Bytes.unsafe_to_string src_dst
 
 (* encrypt-then-sign scheme *)
-let encode (sign_key: string) (cipher_key: string)
+let encode (sign_key: string) (cipher_key: string) (stream_offs: int64 ref)
     (rng: Cryptokit.Random.rng)
     (counter: int ref)
     (m: 'a): string =
@@ -91,15 +93,16 @@ let encode (sign_key: string) (cipher_key: string)
   let nonce = Nonce_store.fresh counter in
   (* Log.debug "enc. nonce = %s" nonce; *)
   let s_n_m = (Bytes.unsafe_to_string salt) ^ nonce ^ "|" ^ maybe_compressed in
-  let encrypted = transform cipher_key s_n_m in
+  let encrypted = transform cipher_key stream_offs s_n_m in
   (sign sign_key encrypted) ^ encrypted
 
 (* check-sign-then-decrypt scheme *)
-let decode (sign_key: string) (cipher_key: string) (s: string): 'a option =
+let decode (sign_key: string) (cipher_key: string) (stream_offs: int64 ref)
+    (s: string): 'a option =
   match check_sign sign_key s with
   | None -> None
   | Some encrypted ->
-    let str = transform cipher_key encrypted in
+    let str = transform cipher_key stream_offs encrypted in
     (* leading salt (8 first bytes) is ignored *)
     (* let salt = String.sub str 0 8 in
        * let salt_hex = Utils.convert `To_hexa salt in
