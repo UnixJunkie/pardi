@@ -15,6 +15,7 @@ depends: [
   "minicli"
   "lz4"
   "cryptokit"
+  "zmq"
 ]
 synopsis: "Parallel and distributed execution of commands"
 description: """
