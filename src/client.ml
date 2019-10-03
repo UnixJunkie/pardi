@@ -34,6 +34,7 @@ let main () =
   Log.info "work_dir: %s" work_dir;
   Parany.set_copy_on_work ();
   Parany.set_copy_on_mux ();
+  let _ctx = Zmq.Context.create () in
   (* Parany.run ~verbose:false ~csize:1 ~nprocs
    *   ~demux:(read_some work_dir input_ext
    *             (Buffer.create 1024) (ref 0) csize in_chan demux)
