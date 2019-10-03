@@ -221,6 +221,7 @@ let main () =
   Log.info "computing input file #chunks...";
   let total_items = nb_chunks demux input_fn in
   Log.info "%d" total_items;
+  let nb_chunks = Utls.ceil ((float total_items) /. (float csize)) in
   (* Parany has a csize of one, because read_some takes care of the number
      of chunks per job *)
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
@@ -231,7 +232,7 @@ let main () =
     ~demux:(read_some work_dir input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some output_ext cmd)
-    ~mux:(gather_some total_items start_t (ref 0) mux);
+    ~mux:(gather_some nb_chunks start_t (ref 0) mux);
   if not !Flags.debug then
     Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
   close_in in_chan
