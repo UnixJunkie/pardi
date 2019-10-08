@@ -27,15 +27,13 @@ let compression_flag = ref true
 
 let compress (msg: string): string =
   if !compression_flag then
-    let compressed = Lz4.compress msg in
-    Marshal.to_string compressed [Marshal.No_sharing]
+    Lz4.compress msg
   else
     msg
 
 let uncompress (msg: string): string =
   if !compression_flag then
-    let compressed = Marshal.from_string msg 0 in
-    Lz4.decompress compressed
+    Lz4.decompress msg
   else
     msg
 
