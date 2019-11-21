@@ -416,7 +416,7 @@ let file_count_matching_lines l fn =
 (* Float.ceil should return an int...
    ceil f: least integer value greater than or equal to f. *)
 let ceil (f: float): int =
-  Float.(to_int (ceil f))
+  BatFloat.(to_int (ceil f))
 
 type socket_type = Push | Pull
 
