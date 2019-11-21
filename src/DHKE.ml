@@ -1,12 +1,14 @@
 
 module DH = Cryptokit.DH
 
-(* messages that will be exchanged during KE *)
-type from_serv =
+(* all protocol messages *)
+type from_srv =
   (* the server will choose the parameters for each client *)
-  | Serv_to_CLI_DHKE_handshake_req of (DH.parameters * string)
+  | Srv_to_Cli_DHKE_handshake_req of (DH.parameters * string)
+  | Srv_to_Cli_jobs_ack of string list (* jobs; empty list means quit *)
 type from_cli =
-  | CLI_to_Serv_DHKE_handshake_ack of (DH.parameters * string)
+  | Cli_to_Srv_DHKE_handshake_ack of (DH.parameters * string)
+  | Cli_to_Srv_jobs_req of (int * string) (* (nb_jobs, prev_results) *)
 
 let signing_key_bit_len = 160
 let signing_key_bytes_len = signing_key_bit_len / 8
@@ -45,6 +47,7 @@ let create_handshake_req (params: DH.parameters) (secret: DH.private_secret)
   : DH.parameters * string =
   (params, DH.message params secret)
 
+(* (sign_key, encryp_key) *)
 let process_handshake
     (params: DH.parameters) (secret: DH.private_secret) (msg: string)
   : (string * string) =
@@ -55,7 +58,7 @@ let process_handshake
   Cryptokit.wipe_string shared_secret;
   assert((shared_secret_bytes_len =
           signing_key_bytes_len + encryption_key_bytes_len) &&
-         signing_key_bytes_len >= 20 && encryption_key_bytes_len >= 16);
+         signing_key_bytes_len = 20 && encryption_key_bytes_len = 16);
   (* cut into (signing_key, encryption_key) *)
   let signing_key =
     String.sub sign_encrypt_keys 0 signing_key_bytes_len in

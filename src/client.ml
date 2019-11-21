@@ -22,6 +22,7 @@ let main () =
   Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
   let _server_name = CLI.get_string ["-s";"--server"] args in
   let _server_port = CLI.get_int ["-p";"--port"] args in
+  let listen_port = CLI.get_int_def ["-l";"--local-port"] args 50_000 in
   let _nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
     | None -> Utls.get_nprocs ()
     | Some n -> n in
@@ -29,12 +30,14 @@ let main () =
     | None -> 1
     | Some n -> n in
   CLI.finalize ();
-  Log.info "contacting server...";
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
   Parany.set_copy_on_work ();
   Parany.set_copy_on_mux ();
-  let _ctx = Zmq.Context.create () in
+  Log.info "contacting server...";
+  (* let ctx = Zmq.Context.create () in *)
+  Log.info "binding server to %s:%d" "*" listen_port;
+  (* let incoming = Utls.(zmq_socket Pull ctx "*" listen_port) in *)
   (* Parany.run ~verbose:false ~csize:1 ~nprocs
    *   ~demux:(read_some work_dir input_ext
    *             (Buffer.create 1024) (ref 0) csize in_chan demux)

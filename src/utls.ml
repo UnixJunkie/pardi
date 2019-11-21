@@ -417,3 +417,22 @@ let file_count_matching_lines l fn =
    ceil f: least integer value greater than or equal to f. *)
 let ceil (f: float): int =
   Float.(to_int (ceil f))
+
+type socket_type = Push | Pull
+
+let zmq_socket
+    (t: socket_type) (context: Zmq.Context.t) (host: string) (port: int) =
+  let host_and_port = sprintf "tcp://%s:%d" host port in
+  match t with
+  | Pull ->
+    let sock = Zmq.Socket.create context Zmq.Socket.pull in
+    Zmq.Socket.bind sock host_and_port;
+    sock
+  | Push ->
+    let sock = Zmq.Socket.create context Zmq.Socket.push in
+    Zmq.Socket.connect sock host_and_port;
+    (* a push socket must wait forever (upon close) that all its messages
+       have been sent *)
+    let infinity = -1 in
+    Zmq.Socket.set_linger_period sock infinity;
+    sock
