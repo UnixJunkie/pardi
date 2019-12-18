@@ -402,7 +402,8 @@ let file_size fn =
 
 (* <=> wc -l fn *)
 let file_nb_lines fn =
-  let res = get_command_output false ("wc -l " ^ fn) in
+  let res' = get_command_output false ("wc -l " ^ fn) in
+  let res = BatString.strip res' in
   Scanf.sscanf res "%d %s" (fun nb_lines fn' ->
       assert(fn = fn');
       nb_lines
