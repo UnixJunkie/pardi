@@ -32,8 +32,6 @@ let main () =
   CLI.finalize ();
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
-  Parany.set_copy_on_work ();
-  Parany.set_copy_on_mux ();
   Log.info "contacting server...";
   (* let ctx = Zmq.Context.create () in *)
   Log.info "binding server to %s:%d" "*" listen_port;

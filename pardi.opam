@@ -24,6 +24,8 @@ Almost like GNU parallel; just better.
 Pardi pushes further the point at which you have to use a supercomputer.
 Alternatively, it can be used on a supercomputer to make life in there
 much more fun and productive.
+
+Put back the fun into computing: use pardi!
 """
 # url {
 #   src: "https://github.com/UnixJunkie/pardi/archive/XXX.tar.gz"
