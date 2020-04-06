@@ -11,10 +11,10 @@ depends: [
   "batteries"
   "dolog" {>= "4.0.0"}
   "parany" {>= "6.0.0"}
-  "minicli"
+  "minicli" {>= "5.0.0"}
   "lz4"
   "cryptokit"
-  "zmq"
+  "zmq" {>= "5.0.0"}
   "ocaml" {>= "4.05.0"}
 ]
 synopsis: "Parallel and distributed execution of command lines, pardi!"
