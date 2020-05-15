@@ -2,7 +2,6 @@
 module CLI = Minicli.CLI
 module Fn = Filename
 module Log = Dolog.Log
-module Squeue = Sorted_queue
 
 open Printf
 
@@ -89,11 +88,8 @@ let read_some work_dir input_ext buff count csize input demux () =
       Sys.remove tmp_fn;
       raise Parany.End_of_input
     end;
-  (* return item count and temp filename *)
-  (* the count will be useful if the user wants to preserve input order *)
-  let res = (!count, tmp_fn) in
   incr count;
-  res
+  tmp_fn
 
 (* compute number of chunks in input file *)
 let nb_chunks demux fn =
@@ -112,7 +108,7 @@ let nb_chunks demux fn =
 let input_fn_tag = Str.regexp "%IN"
 let output_fn_tag = Str.regexp "%OUT"
 
-let process_some output_ext cmd (count, tmp_in_fn) =
+let process_some output_ext cmd tmp_in_fn =
   let job_dir = Fn.dirname tmp_in_fn in
   Unix.chdir job_dir;
   assert(Utls.regexp_in_string input_fn_tag cmd);
@@ -122,29 +118,12 @@ let process_some output_ext cmd (count, tmp_in_fn) =
   let cmd'' = Str.replace_first output_fn_tag tmp_out_fn cmd' in
   let cmd''' = sprintf "%s; rm -f %s" cmd'' tmp_in_fn in
   Utls.run_command !Flags.debug cmd''';
-  (count, tmp_out_fn)
+  tmp_out_fn
 
-(* in case we need to preserve input order *)
-let out_queue = Sorted_queue.create ()
-
-let gather_some total_items start_t mux_count mux_mode (count, tmp_out_fn) =
+let gather_some total_items start_t mux_count mux_mode tmp_out_fn =
   begin
     match mux_mode with
-    | Mux.Null -> () (* tmp_out_fn is not removed? *)
-    | Mux.Sort_cat_into dst_fn ->
-      begin
-        Squeue.insert out_queue (count, tmp_out_fn);
-        let popped = Squeue.pop_all out_queue in
-        List.iter (fun out_fn ->
-            let cmd =
-              if !mux_count = 0 then
-                sprintf "mv %s %s" out_fn dst_fn
-              else
-                sprintf "cat %s >> %s; rm -f %s" out_fn dst_fn out_fn in
-            Utls.run_command !Flags.debug cmd;
-            incr mux_count
-          ) popped
-      end
+    | Mux.Null -> () (* FBR: tmp_out_fn is not removed? *)
     | Mux.Cat_into dst_fn ->
       begin
         let cmd =
@@ -186,8 +165,8 @@ let main () =
               file into chunks (line/bytes/regexp/sep_line; default=line)\n  \
               {-w|--work} <string>: command to execute on each chunk\n  \
               %%IN and %%OUT are special tokens\n  \
-              [{-m|--mux} {c|s|n}]: how to mux job results in output file\n  \
-              (cat/sorted_cat/null; default=cat)\n  \
+              [{-m|--mux} {c|n}]: how to mux job results in output file\n  \
+              (cat/null; default=cat)\n  \
               [{-ie|--input-ext} <string>]: append file extension to work \
               input files\n  \
               [{-oe|--output-ext} <string>]: append file extension to work \
@@ -224,11 +203,11 @@ let main () =
   let total_items = nb_chunks demux input_fn in
   Log.info "%d" total_items;
   let nb_chunks = Utls.ceil ((float total_items) /. (float csize)) in
-  (* Parany has a csize of one, because read_some takes care of the number
-     of chunks per job *)
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
-  Parany.run ~preserve ~csize nprocs
+  (* because read_some takes care of the number of chunks per job
+     !!! PARANY MUST USE A CSIZE OF ONE !!! *)
+  Parany.run ~preserve ~csize:1 nprocs
     ~demux:(read_some work_dir input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some output_ext cmd)

@@ -7,5 +7,5 @@
 (executables
   (names        pardi client)
   (public_names pardi pardi_cli)
-  (modules pardi flags utls mux demux sorted_queue client)
+  (modules pardi flags utls mux demux client)
   (libraries batteries dolog parany minicli str sec_chan zmq))
