@@ -191,7 +191,8 @@ let main () =
               [{-ie|--input-ext} <string>]: append file extension to work \
               input files\n  \
               [{-oe|--output-ext} <string>]: append file extension to work \
-              output files\n"
+              output files\n  \
+              [{-p|--preserve}]: mux results while preserving input order\n"
        Sys.argv.(0);
      exit 1);
   Flags.debug := CLI.get_set_bool ["-v";"--verbose"] args;
@@ -217,6 +218,7 @@ let main () =
   let mux =
     let mux_str = CLI.get_string_def ["-m";"--mux"] args "c" in
     Mux.of_string out_fn mux_str in
+  let preserve = CLI.get_set_bool ["-p";"--preserve"] args in
   CLI.finalize ();
   Log.info "computing input file #chunks...";
   let total_items = nb_chunks demux input_fn in
@@ -226,7 +228,7 @@ let main () =
      of chunks per job *)
   let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
-  Parany.run ~verbose:false ~csize:1 ~nprocs
+  Parany.run ~preserve ~csize nprocs
     ~demux:(read_some work_dir input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
     ~work:(process_some output_ext cmd)
