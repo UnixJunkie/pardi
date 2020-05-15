@@ -133,7 +133,7 @@ let gather_some total_items start_t mux_count mux_mode (count, tmp_out_fn) =
     | Mux.Null -> () (* tmp_out_fn is not removed? *)
     | Mux.Sort_cat_into dst_fn ->
       begin
-        Squeue.insert (count, tmp_out_fn) out_queue;
+        Squeue.insert out_queue (count, tmp_out_fn);
         let popped = Squeue.pop_all out_queue in
         List.iter (fun out_fn ->
             let cmd =
