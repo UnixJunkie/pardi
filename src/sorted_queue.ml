@@ -2,7 +2,7 @@
 (* a queue so that results coming in random order are put back in input order
    before being muxed out (for the Mux.Sort_cat_into output mode) *)
 
-module Ht = BatHashtbl
+module Ht = Hashtbl
 
 type 'a t = { mutable next_rank: int;
               q: (int, 'a) Ht.t }
@@ -17,13 +17,12 @@ let insert q (rank, elt) =
   Ht.add q.q rank elt
 
 let pop q =
-  match Ht.find_option q.q q.next_rank with
-  | None -> None
-  | Some x ->
-    begin
-      q.next_rank <- q.next_rank + 1;
-      Some x
-    end
+  try
+    let x = Ht.find q.q q.next_rank in
+    Ht.remove q.q q.next_rank; (* do not leak mem *)
+    q.next_rank <- q.next_rank + 1;
+    Some x
+  with Not_found -> None
 
 let pop_all q =
   let rec loop acc =
