@@ -2,6 +2,8 @@
 (* a queue so that results coming in random order are put back in input order
    before being muxed out (for the Mux.Sort_cat_into output mode) *)
 
+(* we could remove this file, but it is so cute... *)
+
 module Ht = Hashtbl
 
 type 'a t = { mutable next_rank: int;
