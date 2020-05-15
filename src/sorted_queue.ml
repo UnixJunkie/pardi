@@ -12,7 +12,7 @@ let create () =
   let q = Ht.create 1021 in
   { next_rank; q }
 
-let insert (rank, elt) q =
+let insert q (rank, elt) =
   assert(not (Ht.mem q.q rank)); (* no two elements can have same rank *)
   Ht.add q.q rank elt
 

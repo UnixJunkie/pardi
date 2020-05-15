@@ -3,7 +3,7 @@ type 'a t
 
 val create: unit -> 'a t
 
-val insert: (int * 'a) -> 'a t -> unit
+val insert: 'a t -> (int * 'a) -> unit
 
 val pop: 'a t -> 'a option
 
