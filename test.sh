@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x #DEBUG
 set -u
 
 # rm -f data/decoys_std.smi
