@@ -136,12 +136,19 @@ let gather_some total_items start_t mux_count mux_mode tmp_out_fn =
       end
   end;
   (* user feedback *)
+  let elapsed_t = Unix.gettimeofday () -. start_t in
   if total_items = 0 then
-    let delta_t = Unix.gettimeofday () -. start_t in
-    printf "done: %d freq: %.1f\r%!" !mux_count (float !mux_count /. delta_t)
+    printf "done: %d freq: %.1f\r%!"
+      !mux_count ((float !mux_count) /. elapsed_t)
   else
   if !mux_count <> total_items then
-    printf "done: %.2f%%\r%!" (100. *. (float !mux_count /. float total_items))
+    let completed_fraction = (float !mux_count) /. (float total_items) in
+    let estimated_total = elapsed_t /. completed_fraction in
+    let estimated_remaining = estimated_total -. elapsed_t in
+    let eta_hms = Utls.hms_of_seconds estimated_remaining in
+    let eta_str = Utls.string_of_hms eta_hms in
+    printf "done: %.2f%% ETA: %s\r%!"
+      (100. *. completed_fraction) eta_str
   else
     (* "\027[2K": ANSI escape code to clear current line *)
     printf "\027[2Kdone: 100%%\n%!"
