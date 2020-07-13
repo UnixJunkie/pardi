@@ -445,5 +445,8 @@ let hms_of_seconds (dt_s: float): (int * int *float) =
   let s = dt_s -. (float (h * 3600 + m * 60)) in
   (h, m, s)
 
+let string_of_hms (h, m, s) =
+  sprintf "%dh%dm%.1fs" h m s
+
 (* (\* seconds_to_hms unit test *\)
  * assert(hms_of_seconds 3661.5 = (1, 1, 1.5)) *)
