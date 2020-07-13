@@ -437,3 +437,13 @@ let zmq_socket
     let infinity = -1 in
     Zmq.Socket.set_linger_period sock infinity;
     sock
+
+(* seconds to (hours, minutes, seconds) *)
+let hms_of_seconds (dt_s: float): (int * int *float) =
+  let h = (int_of_float dt_s) / 3600 in
+  let m = ((int_of_float dt_s) - (h * 3600)) / 60 in
+  let s = dt_s -. (float (h * 3600 + m * 60)) in
+  (h, m, s)
+
+(* (\* seconds_to_hms unit test *\)
+ * assert(hms_of_seconds 3661.5 = (1, 1, 1.5)) *)
