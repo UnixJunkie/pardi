@@ -120,25 +120,29 @@ let process_some output_ext cmd tmp_in_fn =
   Utls.run_command !Flags.debug cmd''';
   tmp_out_fn
 
+let execute_shell_script tmp_in_fn =
+  Utls.run_command false (sprintf "sh %s" tmp_in_fn);
+  "/dev/null" (* fake an output file *)
+
 let gather_some total_items start_t mux_count mux_mode tmp_out_fn =
-  begin
-    match mux_mode with
-    | Mux.Null -> () (* FBR: tmp_out_fn is not removed? *)
-    | Mux.Cat_into dst_fn ->
-      begin
-        let cmd =
-          if !mux_count = 0 then
-            sprintf "mv %s %s" tmp_out_fn dst_fn
-          else
-            sprintf "cat %s >> %s; rm -f %s" tmp_out_fn dst_fn tmp_out_fn in
-        Utls.run_command !Flags.debug cmd;
-        incr mux_count
-      end
-  end;
+  (if tmp_out_fn <> "/dev/null" then
+     match mux_mode with
+     | Mux.Null -> () (* FBR: tmp_out_fn is not removed? *)
+     | Mux.Cat_into dst_fn ->
+       begin
+         let cmd =
+           if !mux_count = 0 then
+             sprintf "mv %s %s" tmp_out_fn dst_fn
+           else
+             sprintf "cat %s >> %s; rm -f %s" tmp_out_fn dst_fn tmp_out_fn in
+         Utls.run_command !Flags.debug cmd
+       end
+  );
+  incr mux_count;
   (* user feedback *)
   let elapsed_t = Unix.gettimeofday () -. start_t in
   if total_items = 0 then
-    printf "done: %d freq: %.1f\r%!"
+    eprintf "done: %d freq: %.1f\r%!"
       !mux_count ((float !mux_count) /. elapsed_t)
   else
   if !mux_count <> total_items then
@@ -147,11 +151,11 @@ let gather_some total_items start_t mux_count mux_mode tmp_out_fn =
     let estimated_remaining = estimated_total -. elapsed_t in
     let eta_hms = Utls.hms_of_seconds estimated_remaining in
     let eta_str = Utls.string_of_hms eta_hms in
-    printf "done: %.2f%% ETA: %s\r%!"
+    eprintf "done: %.2f%% ETA: %s\r%!"
       (100. *. completed_fraction) eta_str
   else
     (* "\027[2K": ANSI escape code to clear current line *)
-    printf "\027[2Kdone: 100%%\n%!"
+    eprintf "\027[2Kdone: 100%% ETA: 0s\n%!"
 
 let main () =
   Log.color_on ();
@@ -164,6 +168,7 @@ let main () =
               %s ...\n  \
               {-i|--input} <file>: where to read from\n  \
               {-o|--output} <file>: where to write to (default=stdout)\n  \
+              [-s|--shell]: only shell commands in input file\n  \
               [{-n|--nprocs} <int>]: max jobs in parallel \
               (default=all cores)\n  \
               [{-c|--chunks} <int>]: how many chunks per job (default=1)\n  \
@@ -191,7 +196,7 @@ let main () =
        since each job is chdir to a separate directory *)
     let fn = CLI.get_string_def ["-o";"--output"] args "/dev/stdout" in
     Utls.absolute_filename fn in
-  let cmd = CLI.get_string ["-w";"--work"] args in
+  let maybe_cmd = CLI.get_string_opt ["-w";"--work"] args in
   let nprocs = match CLI.get_int_opt ["-n";"--nprocs"] args with
     | None -> Utls.get_nprocs ()
     | Some n -> n in
@@ -205,19 +210,27 @@ let main () =
     let mux_str = CLI.get_string_def ["-m";"--mux"] args "c" in
     Mux.of_string out_fn mux_str in
   let preserve = CLI.get_set_bool ["-p";"--preserve"] args in
+  let shell_commands = CLI.get_set_bool ["-s";"--shell"] args in
+  let worker =
+    if shell_commands then
+      execute_shell_script
+    else match maybe_cmd with
+      | None -> failwith "Pardi: missing -w or -s option"
+      | Some cmd -> process_some output_ext cmd in
   CLI.finalize ();
   Log.info "computing input file #chunks...";
   let total_items = nb_chunks demux input_fn in
   Log.info "%d" total_items;
   let nb_chunks = Utls.ceil ((float total_items) /. (float csize)) in
-  let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
+  let work_dir =
+    Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
   (* because read_some takes care of the number of chunks per job
      !!! PARANY MUST USE A CSIZE OF ONE !!! *)
   Parany.run ~preserve ~csize:1 nprocs
     ~demux:(read_some work_dir input_ext
               (Buffer.create 1024) (ref 0) csize in_chan demux)
-    ~work:(process_some output_ext cmd)
+    ~work:worker
     ~mux:(gather_some nb_chunks start_t (ref 0) mux);
   if not !Flags.debug then
     Utls.run_command !Flags.debug (sprintf "rm -rf %s" work_dir);
