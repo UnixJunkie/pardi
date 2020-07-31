@@ -175,14 +175,14 @@ exception Exit_not_null
 let run_command (debug: bool) (cmd: string): unit =
   if debug then Log.info "run_command: %s" cmd;
   match Unix.system cmd with
-  | Unix.WSIGNALED _ -> (Log.fatal "run_command: signaled: %s" cmd; raise Signaled)
-  | Unix.WSTOPPED _ -> (Log.fatal "run_command: stopped: %s" cmd; raise Stopped)
+  | Unix.WSIGNALED _ ->
+    (Log.fatal "run_command: signaled: %s" cmd; raise Signaled)
+  | Unix.WSTOPPED _ ->
+    (Log.fatal "run_command: stopped: %s" cmd; raise Stopped)
   | Unix.WEXITED i when i = 0 -> ()
   | Unix.WEXITED i -> (* i <> 0 *)
-    begin
-      Log.fatal "run_command: exit %d: %s" i cmd;
-      raise Exit_not_null
-    end
+    (Log.fatal "run_command: exit %d: %s" i cmd;
+     raise Exit_not_null)
 
 (* remove the prefix if it is there, or do nothing if it is not *)
 let remove_string_prefix prfx str =
