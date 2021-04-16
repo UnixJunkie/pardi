@@ -158,6 +158,7 @@ let gather_some total_items start_t mux_count mux_mode tmp_out_fn =
     eprintf "\027[2Kdone: 100%% ETA: 0s\n%!"
 
 let main () =
+  Log.(set_prefix_builder short_prefix_builder);
   Log.color_on ();
   Log.set_log_level Log.INFO;
   let start_t = Unix.gettimeofday () in
