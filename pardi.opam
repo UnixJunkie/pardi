@@ -12,12 +12,13 @@ depends: [
   "dolog" {>= "4.0.0"}
   "parany" {>= "11.0.0"}
   "minicli" {>= "5.0.0"}
-  "lz4"
-  "cryptokit"
-  "zmq" {>= "5.0.0"}
   "ocaml" {>= "4.05.0"}
+## only the dev. version needs those
+# "lz4"
+# "cryptokit"
+# "zmq" {>= "5.0.0"}
 ]
-synopsis: "Parallel and distributed execution of command lines, pardi!"
+synopsis: "Parallel execution of command lines, pardi!"
 description: """
 Almost like GNU parallel; just better.
 
@@ -26,6 +27,23 @@ Alternatively, it can be used on a supercomputer to make life in there
 much more fun and productive.
 
 Put back the fun into computing: use pardi!
+
+usage:
+pardi ...
+  {-i|--input} <file>: where to read from
+  {-o|--output} <file>: where to write to (default=stdout)
+  [-s|--shell]: only shell commands in input file
+  [{-n|--nprocs} <int>]: max jobs in parallel (default=all cores)
+  [{-c|--chunks} <int>]: how many chunks per job (default=1)
+  [{-d|--demux} {l|b:<int>|r:<regexp>|s:<string>}]: how to cut input 
+  file into chunks (line/bytes/regexp/sep_line; default=line)
+  {-w|--work} <string>: command to execute on each chunk
+  %IN and %OUT are special tokens
+  [{-m|--mux} {c|n}]: how to mux job results in output file
+  (cat/null; default=cat)
+  [{-ie|--input-ext} <string>]: append file extension to work input files
+  [{-oe|--output-ext} <string>]: append file extension to work output files
+  [{-p|--preserve}]: mux results while preserving input order
 """
 # url {
 #   src: "https://github.com/UnixJunkie/pardi/archive/XXX.tar.gz"
