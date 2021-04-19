@@ -18,7 +18,10 @@ let tap f x =
 let fst3 (a, _, _) = a
 
 let create_tmp_filename () =
-  let res = Filename.temp_file "" (* no_prefix *) "" (* no_suffix *) in
+  let res =
+    Filename.temp_file ~temp_dir:"/tmp"
+      "" (* no_prefix *)
+      "" (* no_suffix *) in
   (* tap (Log.info "create_tmp_filename: %s") res; *)
   res
 
@@ -37,7 +40,7 @@ let with_out_file (fn: filename) (f: out_channel -> 'a): 'a =
   res
 
 let with_temp_out_file (f: filename -> 'a): 'a =
-  let temp_file = Filename.temp_file "" (* no_prefix *) "" (* no_suffix *) in
+  let temp_file = create_tmp_filename () in
   let res = f temp_file in
   Sys.remove temp_file;
   res
