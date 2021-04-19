@@ -30,7 +30,8 @@ let main () =
     | None -> 1
     | Some n -> n in
   CLI.finalize ();
-  let work_dir = Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
+  let work_dir =
+    Utls.get_command_output !Flags.debug "mktemp -p /tmp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
   Log.info "contacting server...";
   (* let ctx = Zmq.Context.create () in *)

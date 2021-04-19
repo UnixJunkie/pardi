@@ -224,7 +224,7 @@ let main () =
   Log.info "%d" total_items;
   let nb_chunks = Utls.ceil ((float total_items) /. (float csize)) in
   let work_dir =
-    Utls.get_command_output !Flags.debug "mktemp -d -t pardi_XXXX" in
+    Utls.get_command_output !Flags.debug "mktemp -p /tmp -d -t pardi_XXXX" in
   Log.info "work_dir: %s" work_dir;
   (* because read_some takes care of the number of chunks per job
      !!! PARANY MUST USE A CSIZE OF ONE !!! *)
